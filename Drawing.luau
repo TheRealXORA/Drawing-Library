@@ -1,5 +1,5 @@
 local RunService = game:GetService("RunService")
-local ActiveAutoRotations, SharedHeartbeat = {}
+local ActiveAutoRotations, HeartbeatConnection = {}
 local HiddenUI = gethui and gethui() or game:GetService("CoreGui").RobloxGui
 local Drawing = {}
 
@@ -34,9 +34,12 @@ local BaseObject = setmetatable({
     end
 })
 
+local Letters = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L" }
+local SideCounts = { Triangle = 3, Quad = 4, Pentagon = 5,Hexagon = 6, Heptagon = 7, Octagon = 8, Nonagon = 9, Decagon = 10, Hendecagon = 11, Dodecagon = 12 }
 
 
 --// HELPER FUNCTIONS
+
 
 
 
@@ -44,21 +47,99 @@ local function AssertType(Value, ExpectedType, PropertyName)
     assert(typeof(Value) == ExpectedType, "Property '" .. PropertyName .. "' Expects " .. ExpectedType .. " But Got " .. typeof(Value))
 end
 
-local function ConvertUDim2(UDim_2)
+local function GetCamera()
     local Camera = workspace.CurrentCamera
-    if not (typeof(Camera) == "Instance" and Camera.ClassName == "Camera") then return Vector2.new(Position.X.Offset, Position.Y.Offset) end
-    local Resolution = Camera.ViewportSize
+    if not (typeof(Camera) == "Instance" and Camera.ClassName == "Camera") then return end
+    return Camera, Camera.ViewportSize
+end
+
+local function ConvertUDim2ToVector2(Value)
+    AssertType(Value, "UDim2", "Value")
+    local Camera, Resolution = GetCamera()
+    if not Camera then return Vector2.new(Value.X.Offset, Value.Y.Offset) end
     return Vector2.new(
-        UDim_2.X.Scale * Resolution.X + UDim_2.X.Offset,
-        UDim_2.Y.Scale * Resolution.Y + UDim_2.Y.Offset
+        Value.X.Scale * Resolution.X + Value.X.Offset,
+        Value.Y.Scale * Resolution.Y + Value.Y.Offset
     )
+end
+
+local function GetClosestPoint(Part, Camera, HalfResolution)
+    local ToCenter = Part.Position - Camera.CFrame.p
+    local ViewRayDirection = (Camera:ViewportPointToRay(HalfResolution.X, HalfResolution.Y)).Direction
+    local ProjectionLength = ToCenter:Dot(ViewRayDirection)
+    if ProjectionLength < 0 then return end
+    local HalfSize = Part.Size * 0.5
+    local ProjectedPoint = Camera.CFrame.p + ViewRayDirection * ProjectionLength
+    local Projected = Part.CFrame:PointToObjectSpace(ProjectedPoint)
+    local Clamped = vector.create(
+        math.clamp(Projected.X, -HalfSize.X, HalfSize.X),
+        math.clamp(Projected.Y, -HalfSize.Y, HalfSize.Y),
+        math.clamp(Projected.Z, -HalfSize.Z, HalfSize.Z)
+    )
+    return Part.CFrame:PointToWorldSpace(Clamped)
+end
+
+local function ConvertTargetToScreenPosition(Target, PropertyName, OnScreenCheck)
+    local Type = typeof(Target)
+    
+    if Type == "Instance" and (Target:IsA("BasePart") or Target.ClassName == "Model") then
+        local Camera, Resolution = GetCamera()
+        if not Camera then return end
+        local IsModel = Target.ClassName == "Model"
+        local HalfResolution = Resolution / 2
+        local TargetPart
+        
+        if IsModel then
+            local BestDistance = math.huge
+            
+            for _, Descendant in Target:GetDescendants() do
+                if not Descendant:IsA("BasePart") then continue end
+                
+                local ClosestPoint = GetClosestPoint(Descendant, Camera, HalfResolution)
+                if not ClosestPoint then continue end
+                
+                local Position, OnScreen = Camera:WorldToViewportPoint(ClosestPoint)
+                if OnScreenCheck ~= false and not OnScreen then continue end
+                
+                local Distance = (Vector2.new(Position.X, Position.Y) - HalfResolution).Magnitude
+                if Distance >= BestDistance then continue end
+                
+                BestDistance = Distance
+                TargetPart = Descendant
+            end
+            
+            if not TargetPart then return end
+        else
+            TargetPart = Target
+        end
+        
+        local ClosestPoint = GetClosestPoint(TargetPart, Camera, HalfResolution)
+        if not ClosestPoint or not select(2, Camera:WorldToViewportPoint(ClosestPoint)) then return end
+        
+        local FinalPosition = IsModel and Camera:WorldToViewportPoint(Target:GetPivot().p) or Camera:WorldToViewportPoint(TargetPart.Position)
+        return Vector2.new(FinalPosition.X, FinalPosition.Y)
+    elseif Type == "Vector3" then
+        local Camera = GetCamera()
+        if not Camera then return end
+        
+        local Position, OnScreen = Camera:WorldToViewportPoint(Target)
+        if not OnScreen then return end
+        
+        return Vector2.new(Position.X, Position.Y)
+    elseif Type == "UDim2" then
+        return ConvertUDim2ToVector2(Target)
+    elseif Type == "Vector2" then
+        return Target
+    else
+        error(PropertyName .. " Expects Vector2 Or UDim2 Or Vector3 Or BasePart Or Model But Got " .. Type, 2)
+    end
 end
 
 local function CreateDrawingObject(ObjectType, UpdateFunction)
     return setmetatable({}, {
         __index = ObjectType,
         __newindex = function(_, Key, Value)
-            if table.find({ "__SHAPE", "__INSTANCE", "Remove", "Destroy" }, Key) then
+            if table.find({ "__SHAPE", "__INSTANCE", "Remove", "Destroy", "Trace" }, Key) then
                 error("You Cannot Set " .. Key)
             elseif ObjectType.Stroke and Key == "Stroke" or ObjectType.Gradient and Key == "Gradient" or ObjectType.Outlines and Key == "Outlines" or ObjectType.AutoRotation and Key == "AutoRotation" then
                 error("Cannot Set " .. Key .. " Directly, Use " .. ObjectType.__SHAPE .. "Drawing." .. Key .. ".PropertyName")
@@ -92,7 +173,7 @@ local function CreateDrawingObject(ObjectType, UpdateFunction)
             
             if table.find({"Position", "From", "To", "Size"}, Key) then
                 assert(typeof(Value) == "Vector2" or typeof(Value) == "UDim2", "Property '" .. Key .. "' Expects Vector2 Or UDim2 But Got " .. typeof(Value))
-                Value = typeof(Value) == "UDim2" and ConvertUDim2(Value) or Value
+                Value = typeof(Value) == "UDim2" and ConvertUDim2ToVector2(Value) or Value
             else
                 AssertType(Value, typeof(ObjectType[Key]), Key)
             end
@@ -132,15 +213,16 @@ local function ApplyAutoRotation(Parent, OnTick)
             
             if Value then
                 table.insert(ActiveAutoRotations, Tick)
-                if SharedHeartbeat then return end
-                SharedHeartbeat = RunService.Heartbeat:Connect(function(DeltaTime)
+                -- Fix: renamed SharedHeartbeat to HeartbeatConnection
+                if HeartbeatConnection then return end
+                HeartbeatConnection = RunService.Heartbeat:Connect(function(DeltaTime)
                     for _, Tick in ActiveAutoRotations do
                         task.spawn(Tick, DeltaTime)
                     end
                     
                     if #ActiveAutoRotations ~= 0 then return end
-                    SharedHeartbeat:Disconnect()
-                    SharedHeartbeat = nil
+                    HeartbeatConnection:Disconnect()
+                    HeartbeatConnection = nil
                 end)
             else
                 local ID = table.find(ActiveAutoRotations, Tick)
@@ -257,6 +339,17 @@ local function DrawLine(Parent)
         Frame.Rotation = math.deg(math.atan2(Direction.Y, Direction.X))
     end; UpdateLine()
     
+    function Line:Trace(From, To)
+        From, To = ConvertTargetToScreenPosition(From, "From"), ConvertTargetToScreenPosition(To, "To")
+        if From and To then
+            Line.Visible = true
+            Line.From, Line.To = From, To
+        else
+            Line.Visible = false
+        end
+        UpdateLine()
+    end
+    
     return CreateDrawingObject(Line, UpdateLine)
 end
 
@@ -333,7 +426,6 @@ end
 
 local function DrawPolygon(ShapeName, DefaultPoints)
     local IsNGon = ShapeName == "NGon"
-    local Letters = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L" }
     local SideCount = #DefaultPoints
     
     local Polygon = BaseObject + {
@@ -544,8 +636,8 @@ local function DrawPolygon(ShapeName, DefaultPoints)
             Line.Thickness = Outlines.Thickness
             Line.ZIndex = Outlines.ZIndex + 1
             Line.Rounder.CornerRadius = UDim.new(1, 0)
-            Outlines.Stroke.Enabled = Outlines.Stroke.Enabled
-            Outlines.Gradient.Enabled = Outlines.Gradient.Enabled
+            Line.Stroke.Enabled = Outlines.Stroke.Enabled
+            Line.Gradient.Enabled = Outlines.Gradient.Enabled
         end
         
         for Index = PointCount + 1, #Lines.Outer do
@@ -676,7 +768,7 @@ local function DrawDecagon()
 end
 
 local function DrawHendecagon()
-    return DrawPolygon("Nonagon", CreateEmptyPoints(11))
+    return DrawPolygon("Hendecagon", CreateEmptyPoints(11))
 end
 
 local function DrawDodecagon()
@@ -711,26 +803,17 @@ local DrawingFunctions = {
 
 
 function Drawing.new(Shape)
-    assert(typeof(Shape) == "string", "Expected A Shape Name But Got",  typeof(Shape))
+    assert(typeof(Shape) == "string", "Expected A Shape Name But Got " .. typeof(Shape))
     Shape = Shape:lower():gsub("%W", "")
     local DrawShape = DrawingFunctions[Shape]
-    assert(DrawShape, "Expected A Vaild Shape Name But Got", Shape)
+    assert(DrawShape, "Expected A Valid Shape Name But Got " .. Shape)
     return DrawShape()
 end
 
-function Drawing.IsPositionInShape(Shape, Position, OnScreenCheck)
+function Drawing.IsInShape(Shape, Target, OnScreenCheck)
     assert(typeof(Shape) == "table" and Shape.__SHAPE, "Shape Expects A Valid Drawing Object But Got " .. typeof(Shape))
-    assert(typeof(Position) == "Vector2" or typeof(Position) == "UDim2" or typeof(Position) == "Vector3", "Position Expects Vector2 Or UDim2 or Vector3 But Got " .. typeof(Position))
-    local Camera, ShapeType = workspace.CurrentCamera, Shape.__SHAPE
-    
-    if typeof(Position) == "UDim2" then
-        Position = ConvertUDim2(Position)
-    elseif typeof(Position) == "Vector3" then
-        if not (typeof(Camera) == "Instance" and Camera.ClassName == "Camera") then return false end
-        local ScreenPosition, IsOnScreen = Camera:WorldToViewportPoint(Position)
-        if OnScreenCheck == true and not IsOnScreen then return false end
-        Position = Vector2.new(ScreenPosition.X, ScreenPosition.Y)
-    end
+    local ShapeType = Shape.__SHAPE
+    local Position = ConvertTargetToScreenPosition(Target, "Position/Target", OnScreenCheck)
     
     if ShapeType == "Circle" then
         return (Position - Shape.Position).Magnitude <= Shape.Radius
@@ -745,14 +828,7 @@ function Drawing.IsPositionInShape(Shape, Position, OnScreenCheck)
         local ClosestPointOnLine = Shape.From + LineDirection * HowFarAlongLine
         return (Position - ClosestPointOnLine).Magnitude <= Shape.Thickness / 2
     else
-        local Letters = { "A","B","C","D","E","F","G","H","I","J","K","L" }
-        local SideCounts = {
-            Triangle = 3, Quad = 4, Pentagon = 5, Hexagon = 6,
-            Heptagon = 7, Octagon = 8, Nonagon = 9, Decagon = 10,
-            Hendecagon = 11, Dodecagon = 12, NGon = Shape.Points or 3,
-        }
-        
-        local Count = SideCounts[ShapeType]
+        local Count = SideCounts[ShapeType] or (ShapeType == "NGon" and (Shape.Points or 3))
         local Verts = {}
         
         if Shape.Radius > 0 then
