@@ -1,6 +1,6 @@
 # Drawing Library
 
-A Roblox drawing library that renders 2D shapes directly on screen using `ScreenGui` elements parented inside a hidden UI container. Unlike the default Roblox `Drawing` API which is exploit-only, this library works in any context — normal scripts, local scripts, or executors — by using real `GuiObject` instances under the hood.
+A Roblox drawing library that renders 2D shapes directly on screen using `ScreenGui` elements parented inside a hidden UI container, built on top of real `GuiObject` instances.
 
 The library supports a wide range of shapes: lines, squares, circles, and every regular polygon from a triangle all the way up to a dodecagon, plus a fully flexible N-sided polygon (`NGon`) that lets you define as many vertices as you want. Every shape shares a common set of base properties and supports sub-objects like `Stroke`, `Gradient`, and `AutoRotation` for more advanced visual effects.
 
