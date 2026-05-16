@@ -1,8 +1,8 @@
 # Drawing Library
 
-A Roblox drawing library that renders 2D shapes directly on screen using `ScreenGui` elements parented inside a hidden UI container, built on top of real `GuiObject` instances.
+A Roblox drawing library that renders 2D shapes directly on your screen using real Roblox `GuiObject` instances, parented inside a hidden `ScreenGui`. Every shape is made entirely from `Frame`, `UIStroke`, `UIGradient`, and `UICorner` instances — no `DrawingService`, no deprecated APIs.
 
-The library supports a wide range of shapes: lines, squares, circles, and every regular polygon from a triangle all the way up to a dodecagon, plus a fully flexible N-sided polygon (`NGon`) that lets you define as many vertices as you want. Every shape shares a common set of base properties and supports sub-objects like `Stroke`, `Gradient`, and `AutoRotation` for more advanced visual effects.
+The library supports lines, squares, circles, and every regular polygon from a triangle up to a dodecagon, plus a flexible N-sided polygon (`NGon`) for any number of vertices. Every shape shares a common set of base properties and supports sub-objects like `Stroke`, `Gradient`, and `AutoRotation` for more advanced visual effects.
 
 ---
 
@@ -47,7 +47,7 @@ local Drawing = loadstring(game:HttpGet("https://raw.githubusercontent.com/TheRe
 
 local Circle = Drawing.new("Circle")
 Circle.Radius   = 50
-Circle.Position = Vector2.new(200, 200)
+Circle.Position = workspace.CurrentCamera.ViewportSize / 2
 Circle.Color    = Color3.fromRGB(255, 80, 80)
 Circle.Filled   = true
 Circle.Visible  = true
@@ -115,36 +115,42 @@ Returns `true` if the given `Target` position lies within the bounds of `Shape`.
 **Example 1 — Check if the screen center is inside a circle:**
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Circle = Drawing.new("Circle")
-Circle.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
+Circle.Position = Center
 Circle.Radius   = 80
 Circle.Color    = Color3.fromRGB(0, 200, 255)
 Circle.Filled   = true
 Circle.Visible  = true
 
-local IsInside = Drawing.IsInShape(Circle, UDim2.new(0.5, 0, 0.5, 0))
+local IsInside = Drawing.IsInShape(Circle, Center)
 print(IsInside) -- true, the center of the screen is inside the circle
 ```
 
 **Example 2 — Check if a specific pixel is inside a square:**
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Square = Drawing.new("Square")
-Square.Position = Vector2.new(400, 300)
+Square.Position = Center
 Square.Size     = Vector2.new(200, 120)
 Square.Color    = Color3.fromRGB(255, 180, 0)
 Square.Filled   = true
 Square.Visible  = true
 
-local IsInside = Drawing.IsInShape(Square, Vector2.new(450, 320))
+local IsInside = Drawing.IsInShape(Square, Center + Vector2.new(50, 20))
 print(IsInside) -- true, the point is within the square bounds
 ```
 
 **Example 3 — Check if a point is inside a triangle:**
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Triangle = Drawing.new("Triangle")
-Triangle.Position = Vector2.new(150, 500)
+Triangle.Position = Center
 Triangle.PointA   = Vector2.new(0, -70)
 Triangle.PointB   = Vector2.new(60, 40)
 Triangle.PointC   = Vector2.new(-60, 40)
@@ -152,22 +158,23 @@ Triangle.Color    = Color3.fromRGB(100, 255, 140)
 Triangle.Filled   = true
 Triangle.Visible  = true
 
-local IsInside = Drawing.IsInShape(Triangle, Vector2.new(150, 480))
+local IsInside = Drawing.IsInShape(Triangle, Center + Vector2.new(0, 10))
 print(IsInside) -- true, the point is inside the triangle
 ```
 
-**Example 4 — Check using a UDim2 scale position against a polygon:**
+**Example 4 — Check using a point offset from center against a hexagon:**
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Hexagon = Drawing.new("Hexagon")
-Hexagon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
+Hexagon.Position = Center
 Hexagon.Radius   = 100
 Hexagon.Color    = Color3.fromRGB(180, 80, 255)
 Hexagon.Filled   = true
 Hexagon.Visible  = true
 
--- Test a point slightly off center
-local IsInside = Drawing.IsInShape(Hexagon, UDim2.new(0.5, 50, 0.5, 30))
+local IsInside = Drawing.IsInShape(Hexagon, Center + Vector2.new(50, 30))
 print(IsInside) -- true or false depending on if that offset lands inside the hexagon
 ```
 
@@ -177,12 +184,12 @@ print(IsInside) -- true or false depending on if that offset lands inside the he
 
 Every drawing object inherits these base properties regardless of shape type.
 
-| Property     | Type    | Default             | Description                                          |
-|--------------|---------|---------------------|------------------------------------------------------|
-| Visible      | boolean | `true`              | Whether the shape is rendered on screen              |
-| Transparency | number  | `1`                 | Opacity from `0` (invisible) to `1` (fully opaque)   |
-| Color        | Color3  | `Color3.new(1,1,1)` | Fill color of the shape                              |
-| ZIndex       | number  | `0`                 | Render order — higher values draw on top             |
+| Property     | Type    | Default             | Description                                        |
+|--------------|---------|---------------------|----------------------------------------------------|
+| Visible      | boolean | `true`              | Whether the shape is rendered on screen            |
+| Transparency | number  | `1`                 | Opacity from `0` (invisible) to `1` (fully opaque) |
+| Color        | Color3  | `Color3.new(1,1,1)` | Fill color of the shape                            |
+| ZIndex       | number  | `0`                 | Render order — higher values draw on top           |
 | AnchorPoint  | Vector2 | `Vector2.one / 2`   | Pivot point for positioning (0–1 range on each axis) |
 
 ### Shared Methods
@@ -217,6 +224,7 @@ Controls the border drawn around the shape. Available on `Line`, `Square`, `Circ
 Shape.Stroke.Enabled      = true
 Shape.Stroke.Color        = Color3.fromRGB(0, 0, 0)
 Shape.Stroke.Thickness    = 2
+Shape.Stroke.Transparency = 1
 Shape.Stroke.LineJoinMode = Enum.LineJoinMode.Round
 ```
 
@@ -225,6 +233,7 @@ Shape.Stroke.LineJoinMode = Enum.LineJoinMode.Round
 | Enabled      | boolean           | `true`                    | Whether the stroke is drawn                       |
 | Color        | Color3            | `Color3.new(1,1,1)`       | Color of the stroke                               |
 | Thickness    | number            | `1`                       | Width of the stroke in pixels                     |
+| Transparency | number            | `1`                       | Opacity from `0` (invisible) to `1` (fully opaque) |
 | LineJoinMode | Enum.LineJoinMode | `Enum.LineJoinMode.Miter` | Corner join style for the stroke                  |
 | Gradient     | Gradient          | —                         | Gradient applied to the stroke (read-only handle) |
 
@@ -242,13 +251,13 @@ Shape.Gradient.Transparency = NumberSequence.new(0)
 Shape.Gradient.Offset       = Vector2.new(0, 0)
 ```
 
-| Property     | Type           | Default                 | Description                                              |
-|--------------|----------------|-------------------------|----------------------------------------------------------|
-| Enabled      | boolean        | `false`                 | Whether the gradient is applied                          |
-| Color        | ColorSequence  | White → Black → White   | Color gradient mapped across the shape                   |
-| Rotation     | number         | `0`                     | Rotation of the gradient direction in degrees            |
-| Transparency | NumberSequence | `NumberSequence.new(0)` | Transparency gradient mapped across the shape            |
-| Offset       | Vector2        | `Vector2.new(0, 0)`     | Offset of the gradient origin point                      |
+| Property     | Type           | Default                 | Description                                                  |
+|--------------|----------------|-------------------------|--------------------------------------------------------------|
+| Enabled      | boolean        | `false`                 | Whether the gradient is applied                              |
+| Color        | ColorSequence  | White → Black → White   | Color gradient mapped across the shape                       |
+| Rotation     | number         | `0`                     | Rotation of the gradient direction in degrees                |
+| Transparency | NumberSequence | `NumberSequence.new(0)` | Transparency gradient mapped across the shape                |
+| Offset       | Vector2        | `Vector2.new(0, 0)`     | Offset of the gradient origin point                          |
 | AutoRotation | AutoRotation   | —                       | Auto-rotation sub-object for the gradient (read-only handle) |
 
 ---
@@ -293,18 +302,6 @@ Shape.Rounder.CornerRadius = UDim.new(1, 0)
 
 > **Note:** `Circle` already sets `CornerRadius` to `UDim.new(1, 0)` by default to achieve its circular shape. Changing it will distort the circle. For `Line` and `Square`, the default is `UDim.new(0, 0)` (sharp corners).
 
-**Example — rounded square:**
-
-```luau
-local Square = Drawing.new("Square")
-Square.Position             = UDim2.new(0.5, 0, 0.5, 0)
-Square.Size                 = Vector2.new(200, 80)
-Square.Color                = Color3.fromRGB(80, 200, 255)
-Square.Filled               = true
-Square.Visible              = true
-Square.Rounder.CornerRadius = UDim.new(0, 16) -- 16px rounded corners
-```
-
 ---
 
 ### Outlines (Polygons only)
@@ -341,7 +338,7 @@ This means if you read the property back after setting it with a `UDim2`, **you 
 local Square = Drawing.new("Square")
 
 -- You can set with UDim2 — scale and offset are both supported
-Square.Position = UDim2.new(0.5, 0, 0.5, 0)  -- center of screen
+Square.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
 Square.Size     = UDim2.fromOffset(200, 100)
 
 -- Reading it back will return a Vector2, not a UDim2
@@ -354,22 +351,24 @@ print(Square.Position) -- Vector2 (e.g. 960, 540 on a 1920x1080 screen)
 
 ## Shapes
 
+All examples below use `workspace.CurrentCamera.ViewportSize / 2` to position shapes in the center of the screen.
+
 ---
 
 ### Line
 
 Draws a straight line between two screen positions.
 
-| Property     | Type           | Default             | Description                    |
-|--------------|----------------|---------------------|--------------------------------|
-| From         | Vector2\|UDim2 | `Vector2.zero`      | Start point of the line        |
-| To           | Vector2\|UDim2 | `Vector2.zero`      | End point of the line          |
-| Thickness    | number         | `1`                 | Width of the line in pixels    |
-| Visible      | boolean        | `true`              | Inherited from base            |
-| Transparency | number         | `1`                 | Inherited from base            |
-| Color        | Color3         | `Color3.new(1,1,1)` | Inherited from base            |
-| ZIndex       | number         | `0`                 | Inherited from base            |
-| AnchorPoint  | Vector2        | `Vector2.one / 2`   | Inherited from base            |
+| Property     | Type           | Default             | Description                 |
+|--------------|----------------|---------------------|-----------------------------|
+| From         | Vector2\|UDim2 | `Vector2.zero`      | Start point of the line     |
+| To           | Vector2\|UDim2 | `Vector2.zero`      | End point of the line       |
+| Thickness    | number         | `1`                 | Width of the line in pixels |
+| Visible      | boolean        | `true`              | Inherited from base         |
+| Transparency | number         | `1`                 | Inherited from base         |
+| Color        | Color3         | `Color3.new(1,1,1)` | Inherited from base         |
+| ZIndex       | number         | `0`                 | Inherited from base         |
+| AnchorPoint  | Vector2        | `Vector2.one / 2`   | Inherited from base         |
 
 > **Note:** `From` and `To` accept `Vector2` or `UDim2`. When set with a `UDim2`, the value is immediately converted and stored as a `Vector2`. Reading `From` or `To` back will always return a `Vector2`.
 
@@ -383,34 +382,79 @@ Line:Trace(From: Vector2 | Vector3 | BasePart | Model, To: Vector2 | Vector3 | B
 
 Automatically updates `From` and `To` by converting 3D world targets to screen positions on each call. If either target goes off-screen, the line is hidden automatically and shown again once both targets are visible.
 
-#### Example 1 — Centered diagonal line with a gradient:
+---
+
+#### 1. Basic Line
 
 ```luau
-local Line = Drawing.new("Line")
-Line.From      = UDim2.new(0.5, -150, 0.5, -80) -- offset left and up from center
-Line.To        = UDim2.new(0.5,  150, 0.5,  80) -- offset right and down from center
-Line.Thickness = 4
-Line.Color     = Color3.fromRGB(255, 80, 180)
-Line.Visible   = true
+local Center = workspace.CurrentCamera.ViewportSize / 2
 
-Line.Gradient.Enabled = true
-Line.Gradient.Color   = ColorSequence.new(Color3.fromRGB(255, 80, 180), Color3.fromRGB(80, 180, 255))
+local Line = Drawing.new("Line")
+Line.From      = Center + Vector2.new(-100, 0)
+Line.To        = Center + Vector2.new(100, 0)
+Line.Thickness = 3
+Line.Color     = Color3.fromRGB(255, 255, 255)
+Line.Visible   = true
 ```
 
-#### Example 2 — Thin white line in the top-left corner with a stroke:
+#### 2. Line with Stroke
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Line = Drawing.new("Line")
-Line.From      = Vector2.new(50, 80)
-Line.To        = Vector2.new(300, 200)
-Line.Thickness = 2
+Line.From      = Center + Vector2.new(-100, 0)
+Line.To        = Center + Vector2.new(100, 0)
+Line.Thickness = 3
+Line.Color     = Color3.fromRGB(255, 80, 80)
+Line.Visible   = true
+
+Line.Stroke.Enabled      = true
+Line.Stroke.Color        = Color3.fromRGB(0, 0, 0)
+Line.Stroke.Thickness    = 2
+Line.Stroke.Transparency = 1
+```
+
+#### 3. Line with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Line = Drawing.new("Line")
+Line.From      = Center + Vector2.new(-100, 0)
+Line.To        = Center + Vector2.new(100, 0)
+Line.Thickness = 3
 Line.Color     = Color3.fromRGB(255, 255, 255)
 Line.Visible   = true
 
-Line.Stroke.Enabled   = true
-Line.Stroke.Color     = Color3.fromRGB(0, 0, 0)
-Line.Stroke.Thickness = 1
+Line.Gradient.Enabled  = true
+Line.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 80, 180), Color3.fromRGB(80, 180, 255))
+Line.Gradient.Rotation = 0
 ```
+
+#### 4. Line with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Line = Drawing.new("Line")
+Line.From      = Center + Vector2.new(-100, 0)
+Line.To        = Center + Vector2.new(100, 0)
+Line.Thickness = 4
+Line.Color     = Color3.fromRGB(255, 255, 255)
+Line.Visible   = true
+
+Line.Stroke.Enabled      = true
+Line.Stroke.Color        = Color3.fromRGB(0, 0, 0)
+Line.Stroke.Thickness    = 2
+Line.Stroke.Transparency = 1
+
+Line.Gradient.Enabled  = true
+Line.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 80, 180), Color3.fromRGB(80, 180, 255))
+Line.Gradient.Rotation = 0
+```
+
+> **Note:** `Line` does not support `AutoRotation`. Its angle is always computed from `From` and `To`.
 
 ---
 
@@ -430,49 +474,97 @@ Draws a rectangle that can be filled or just outlined.
 | ZIndex       | number         | `0`                 | Inherited from base                         |
 | AnchorPoint  | Vector2        | `Vector2.one / 2`   | Inherited from base                         |
 
-> **Note:** `Position` and `Size` accept `Vector2` or `UDim2`. When set with a `UDim2`, the value is immediately converted and stored as a `Vector2`. Reading them back will always return a `Vector2`.
-
 **Sub-objects:** `Stroke`, `Gradient`, `Rounder`, `AutoRotation`
 
 > **Note:** When `Filled` is `false`, `Stroke.Enabled` is forced to `true` automatically so the border is always visible.
 
-#### Example 1 — Centered square with a gradient, stroke, and auto-rotation:
+---
+
+#### 1. Basic Square
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Square = Drawing.new("Square")
-Square.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Square.Size     = Vector2.new(160, 160)
+Square.Position = Center
+Square.Size     = Vector2.new(150, 150)
+Square.Color    = Color3.fromRGB(255, 255, 255)
+Square.Filled   = true
+Square.Visible  = true
+```
+
+#### 2. Square with Stroke
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Square = Drawing.new("Square")
+Square.Position = Center
+Square.Size     = Vector2.new(150, 150)
 Square.Color    = Color3.fromRGB(255, 120, 40)
+Square.Filled   = true
+Square.Visible  = true
+
+Square.Stroke.Enabled      = true
+Square.Stroke.Color        = Color3.fromRGB(255, 255, 255)
+Square.Stroke.Thickness    = 3
+Square.Stroke.Transparency = 1
+```
+
+#### 3. Square with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Square = Drawing.new("Square")
+Square.Position = Center
+Square.Size     = Vector2.new(150, 150)
+Square.Color    = Color3.fromRGB(255, 255, 255)
 Square.Filled   = true
 Square.Visible  = true
 
 Square.Gradient.Enabled  = true
 Square.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 60, 60), Color3.fromRGB(255, 220, 0))
 Square.Gradient.Rotation = 45
+```
 
-Square.Stroke.Enabled   = true
-Square.Stroke.Color     = Color3.fromRGB(255, 255, 255)
-Square.Stroke.Thickness = 3
+#### 4. Square with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Square = Drawing.new("Square")
+Square.Position = Center
+Square.Size     = Vector2.new(150, 150)
+Square.Color    = Color3.fromRGB(255, 255, 255)
+Square.Filled   = true
+Square.Visible  = true
+
+Square.Stroke.Enabled      = true
+Square.Stroke.Color        = Color3.fromRGB(255, 255, 255)
+Square.Stroke.Thickness    = 3
+Square.Stroke.Transparency = 1
+
+Square.Gradient.Enabled  = true
+Square.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 60, 60), Color3.fromRGB(255, 220, 0))
+Square.Gradient.Rotation = 45
+```
+
+#### 5. Square with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Square = Drawing.new("Square")
+Square.Position = Center
+Square.Size     = Vector2.new(150, 150)
+Square.Color    = Color3.fromRGB(255, 120, 40)
+Square.Filled   = true
+Square.Visible  = true
 
 Square.AutoRotation.Enabled = true
 Square.AutoRotation.Amount  = 60
 Square.AutoRotation.Speed   = 1
-```
-
-#### Example 2 — Unfilled square (border only) with rounded corners in the top-right:
-
-```luau
-local Square = Drawing.new("Square")
-Square.Position             = Vector2.new(820, 80)
-Square.Size                 = Vector2.new(120, 120)
-Square.Color                = Color3.fromRGB(80, 200, 255)
-Square.Filled               = false
-Square.Visible              = true
-Square.Rounder.CornerRadius = UDim.new(0, 12)
-
-Square.Stroke.Enabled   = true
-Square.Stroke.Color     = Color3.fromRGB(80, 200, 255)
-Square.Stroke.Thickness = 3
 ```
 
 ---
@@ -481,31 +573,103 @@ Square.Stroke.Thickness = 3
 
 Draws a circle defined by a center position and a radius.
 
-| Property     | Type           | Default             | Description                                              |
-|--------------|----------------|---------------------|----------------------------------------------------------|
-| Position     | Vector2\|UDim2 | `Vector2.zero`      | Center of the circle on screen                           |
-| Radius       | number         | `0`                 | Radius of the circle in pixels                           |
-| Filled       | boolean        | `true`              | If `false`, only the stroke border is drawn              |
-| Rotation     | number         | `0`                 | Rotation in degrees (mainly affects gradient direction)  |
-| Visible      | boolean        | `true`              | Inherited from base                                      |
-| Transparency | number         | `1`                 | Inherited from base                                      |
-| Color        | Color3         | `Color3.new(1,1,1)` | Inherited from base                                      |
-| ZIndex       | number         | `0`                 | Inherited from base                                      |
-| AnchorPoint  | Vector2        | `Vector2.one / 2`   | Inherited from base                                      |
-
-> **Note:** `Position` accepts `Vector2` or `UDim2`. When set with a `UDim2`, the value is immediately converted and stored as a `Vector2`. Reading it back will always return a `Vector2`.
+| Property     | Type           | Default             | Description                                             |
+|--------------|----------------|---------------------|---------------------------------------------------------|
+| Position     | Vector2\|UDim2 | `Vector2.zero`      | Center of the circle on screen                          |
+| Radius       | number         | `0`                 | Radius of the circle in pixels                          |
+| Filled       | boolean        | `true`              | If `false`, only the stroke border is drawn             |
+| Rotation     | number         | `0`                 | Rotation in degrees (mainly affects gradient direction) |
+| Visible      | boolean        | `true`              | Inherited from base                                     |
+| Transparency | number         | `1`                 | Inherited from base                                     |
+| Color        | Color3         | `Color3.new(1,1,1)` | Inherited from base                                     |
+| ZIndex       | number         | `0`                 | Inherited from base                                     |
+| AnchorPoint  | Vector2        | `Vector2.one / 2`   | Inherited from base                                     |
 
 **Sub-objects:** `Stroke`, `Gradient`, `Rounder`, `AutoRotation`
 
-> **Note:** `Stroke.LineJoinMode` is pre-set to `Enum.LineJoinMode.Round` to ensure smooth circle borders. When `Filled` is `false`, `Stroke.Enabled` is forced to `true` automatically.
+> **Note:** `Stroke.LineJoinMode` is pre-set to `Enum.LineJoinMode.Round` for smooth circle borders. When `Filled` is `false`, `Stroke.Enabled` is forced to `true` automatically.
 
-#### Example 1 — Centered circle with a spinning gradient and stroke:
+---
+
+#### 1. Basic Circle
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Circle = Drawing.new("Circle")
-Circle.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Circle.Radius   = 90
+Circle.Position = Center
+Circle.Radius   = 80
+Circle.Color    = Color3.fromRGB(255, 255, 255)
+Circle.Filled   = true
+Circle.Visible  = true
+```
+
+#### 2. Circle with Stroke
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Circle = Drawing.new("Circle")
+Circle.Position = Center
+Circle.Radius   = 80
 Circle.Color    = Color3.fromRGB(40, 120, 255)
+Circle.Filled   = true
+Circle.Visible  = true
+
+Circle.Stroke.Enabled      = true
+Circle.Stroke.Color        = Color3.fromRGB(255, 255, 255)
+Circle.Stroke.Thickness    = 3
+Circle.Stroke.Transparency = 1
+```
+
+#### 3. Circle with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Circle = Drawing.new("Circle")
+Circle.Position = Center
+Circle.Radius   = 80
+Circle.Color    = Color3.fromRGB(255, 255, 255)
+Circle.Filled   = true
+Circle.Visible  = true
+
+Circle.Gradient.Enabled  = true
+Circle.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 200, 255), Color3.fromRGB(180, 0, 255))
+Circle.Gradient.Rotation = 0
+```
+
+#### 4. Circle with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Circle = Drawing.new("Circle")
+Circle.Position = Center
+Circle.Radius   = 80
+Circle.Color    = Color3.fromRGB(255, 255, 255)
+Circle.Filled   = true
+Circle.Visible  = true
+
+Circle.Stroke.Enabled      = true
+Circle.Stroke.Color        = Color3.fromRGB(255, 255, 255)
+Circle.Stroke.Thickness    = 3
+Circle.Stroke.Transparency = 1
+
+Circle.Gradient.Enabled  = true
+Circle.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 200, 255), Color3.fromRGB(180, 0, 255))
+Circle.Gradient.Rotation = 0
+```
+
+#### 5. Circle with AutoRotation (spinning gradient)
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Circle = Drawing.new("Circle")
+Circle.Position = Center
+Circle.Radius   = 80
+Circle.Color    = Color3.fromRGB(255, 255, 255)
 Circle.Filled   = true
 Circle.Visible  = true
 
@@ -516,25 +680,6 @@ Circle.Gradient.Rotation = 0
 Circle.Gradient.AutoRotation.Enabled = true
 Circle.Gradient.AutoRotation.Amount  = 120
 Circle.Gradient.AutoRotation.Speed   = 1
-
-Circle.Stroke.Enabled   = true
-Circle.Stroke.Color     = Color3.fromRGB(255, 255, 255)
-Circle.Stroke.Thickness = 3
-```
-
-#### Example 2 — Unfilled circle used as a ring near the bottom-left:
-
-```luau
-local Circle = Drawing.new("Circle")
-Circle.Position = Vector2.new(120, 500)
-Circle.Radius   = 55
-Circle.Color    = Color3.fromRGB(255, 80, 80)
-Circle.Filled   = false
-Circle.Visible  = true
-
-Circle.Stroke.Enabled   = true
-Circle.Stroke.Color     = Color3.fromRGB(255, 80, 80)
-Circle.Stroke.Thickness = 4
 ```
 
 ---
@@ -543,18 +688,18 @@ Circle.Stroke.Thickness = 4
 
 The following shapes all share the same property set and behave identically. Each shape defines its vertices using named point properties (`PointA`, `PointB`, etc.) relative to `Position`.
 
-| Shape       | Sides | Point Properties             |
-|-------------|-------|------------------------------|
-| Triangle    | 3     | `PointA`, `PointB`, `PointC` |
-| Quad        | 4     | `PointA` … `PointD`          |
-| Pentagon    | 5     | `PointA` … `PointE`          |
-| Hexagon     | 6     | `PointA` … `PointF`          |
-| Heptagon    | 7     | `PointA` … `PointG`          |
-| Octagon     | 8     | `PointA` … `PointH`          |
-| Nonagon     | 9     | `PointA` … `PointI`          |
-| Decagon     | 10    | `PointA` … `PointJ`          |
-| Hendecagon  | 11    | `PointA` … `PointK`          |
-| Dodecagon   | 12    | `PointA` … `PointL`          |
+| Shape      | Sides | Point Properties           |
+|------------|-------|----------------------------|
+| Triangle   | 3     | `PointA`, `PointB`, `PointC` |
+| Quad       | 4     | `PointA` … `PointD`        |
+| Pentagon   | 5     | `PointA` … `PointE`        |
+| Hexagon    | 6     | `PointA` … `PointF`        |
+| Heptagon   | 7     | `PointA` … `PointG`        |
+| Octagon    | 8     | `PointA` … `PointH`        |
+| Nonagon    | 9     | `PointA` … `PointI`        |
+| Decagon    | 10    | `PointA` … `PointJ`        |
+| Hendecagon | 11    | `PointA` … `PointK`        |
+| Dodecagon  | 12    | `PointA` … `PointL`        |
 
 #### Shared Polygon Properties
 
@@ -571,8 +716,6 @@ The following shapes all share the same property set and behave identically. Eac
 | ZIndex       | number         | `0`                 | Inherited from base                                                                 |
 | AnchorPoint  | Vector2        | `Vector2.one / 2`   | Inherited from base                                                                 |
 
-> **Note:** `Position` accepts `Vector2` or `UDim2`. When set with a `UDim2`, the value is immediately converted and stored as a `Vector2`. Reading it back will always return a `Vector2`.
-
 **Sub-objects:** `Gradient`, `Outlines`, `AutoRotation`
 
 > **Tip:** Setting `Radius > 0` is the easiest way to draw a regular polygon. All vertices are spaced evenly around `Position` at the given radius, so you don't need to set any `PointX` values manually.
@@ -581,35 +724,31 @@ The following shapes all share the same property set and behave identically. Eac
 
 ### Triangle
 
-#### Example 1 — Centered triangle with a gradient and spinning auto-rotation:
+#### 1. Basic Triangle
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Triangle = Drawing.new("Triangle")
-Triangle.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Triangle.PointA   = Vector2.new(0, -90)
-Triangle.PointB   = Vector2.new(78, 45)
-Triangle.PointC   = Vector2.new(-78, 45)
-Triangle.Color    = Color3.fromRGB(100, 220, 100)
+Triangle.Position = Center
+Triangle.PointA   = Vector2.new(0, -80)
+Triangle.PointB   = Vector2.new(70, 40)
+Triangle.PointC   = Vector2.new(-70, 40)
+Triangle.Color    = Color3.fromRGB(255, 255, 255)
 Triangle.Filled   = true
 Triangle.Visible  = true
-
-Triangle.Gradient.Enabled  = true
-Triangle.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 255, 120), Color3.fromRGB(0, 80, 255))
-Triangle.Gradient.Rotation = 90
-
-Triangle.AutoRotation.Enabled = true
-Triangle.AutoRotation.Amount  = 45
-Triangle.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Small triangle in the bottom-right with an outline:
+#### 2. Triangle with Stroke (Outlines)
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Triangle = Drawing.new("Triangle")
-Triangle.Position = Vector2.new(800, 500)
-Triangle.PointA   = Vector2.new(0, -50)
-Triangle.PointB   = Vector2.new(44, 25)
-Triangle.PointC   = Vector2.new(-44, 25)
+Triangle.Position = Center
+Triangle.PointA   = Vector2.new(0, -80)
+Triangle.PointB   = Vector2.new(70, 40)
+Triangle.PointC   = Vector2.new(-70, 40)
 Triangle.Color    = Color3.fromRGB(255, 160, 0)
 Triangle.Filled   = true
 Triangle.Visible  = true
@@ -619,41 +758,98 @@ Triangle.Outlines.Color     = Color3.fromRGB(255, 255, 255)
 Triangle.Outlines.Thickness = 2
 ```
 
+#### 3. Triangle with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Triangle = Drawing.new("Triangle")
+Triangle.Position = Center
+Triangle.PointA   = Vector2.new(0, -80)
+Triangle.PointB   = Vector2.new(70, 40)
+Triangle.PointC   = Vector2.new(-70, 40)
+Triangle.Color    = Color3.fromRGB(255, 255, 255)
+Triangle.Filled   = true
+Triangle.Visible  = true
+
+Triangle.Gradient.Enabled  = true
+Triangle.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 255, 120), Color3.fromRGB(0, 80, 255))
+Triangle.Gradient.Rotation = 90
+```
+
+#### 4. Triangle with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Triangle = Drawing.new("Triangle")
+Triangle.Position = Center
+Triangle.PointA   = Vector2.new(0, -80)
+Triangle.PointB   = Vector2.new(70, 40)
+Triangle.PointC   = Vector2.new(-70, 40)
+Triangle.Color    = Color3.fromRGB(255, 255, 255)
+Triangle.Filled   = true
+Triangle.Visible  = true
+
+Triangle.Outlines.Visible   = true
+Triangle.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Triangle.Outlines.Thickness = 2
+
+Triangle.Gradient.Enabled  = true
+Triangle.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 255, 120), Color3.fromRGB(0, 80, 255))
+Triangle.Gradient.Rotation = 90
+```
+
+#### 5. Triangle with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Triangle = Drawing.new("Triangle")
+Triangle.Position = Center
+Triangle.PointA   = Vector2.new(0, -80)
+Triangle.PointB   = Vector2.new(70, 40)
+Triangle.PointC   = Vector2.new(-70, 40)
+Triangle.Color    = Color3.fromRGB(100, 220, 100)
+Triangle.Filled   = true
+Triangle.Visible  = true
+
+Triangle.AutoRotation.Enabled = true
+Triangle.AutoRotation.Amount  = 45
+Triangle.AutoRotation.Speed   = 1
+```
+
 ---
 
 ### Quad
 
-#### Example 1 — Centered quad with a gradient and auto-rotation:
+#### 1. Basic Quad
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Quad = Drawing.new("Quad")
-Quad.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
+Quad.Position = Center
 Quad.PointA   = Vector2.new(-90, -60)
 Quad.PointB   = Vector2.new(90, -60)
 Quad.PointC   = Vector2.new(90, 60)
 Quad.PointD   = Vector2.new(-90, 60)
-Quad.Color    = Color3.fromRGB(255, 160, 0)
+Quad.Color    = Color3.fromRGB(255, 255, 255)
 Quad.Filled   = true
 Quad.Visible  = true
-
-Quad.Gradient.Enabled  = true
-Quad.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 220, 50))
-Quad.Gradient.Rotation = 0
-
-Quad.AutoRotation.Enabled = true
-Quad.AutoRotation.Amount  = 30
-Quad.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Skewed quad (non-rectangular) near the top-left with an outline:
+#### 2. Quad with Stroke (Outlines)
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Quad = Drawing.new("Quad")
-Quad.Position = Vector2.new(200, 150)
-Quad.PointA   = Vector2.new(-70, -50)
-Quad.PointB   = Vector2.new(100, -30)
-Quad.PointC   = Vector2.new(70, 60)
-Quad.PointD   = Vector2.new(-50, 40)
+Quad.Position = Center
+Quad.PointA   = Vector2.new(-90, -60)
+Quad.PointB   = Vector2.new(90, -60)
+Quad.PointC   = Vector2.new(90, 60)
+Quad.PointD   = Vector2.new(-90, 60)
 Quad.Color    = Color3.fromRGB(80, 180, 255)
 Quad.Filled   = true
 Quad.Visible  = true
@@ -663,156 +859,362 @@ Quad.Outlines.Color     = Color3.fromRGB(255, 255, 255)
 Quad.Outlines.Thickness = 2
 ```
 
+#### 3. Quad with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Quad = Drawing.new("Quad")
+Quad.Position = Center
+Quad.PointA   = Vector2.new(-90, -60)
+Quad.PointB   = Vector2.new(90, -60)
+Quad.PointC   = Vector2.new(90, 60)
+Quad.PointD   = Vector2.new(-90, 60)
+Quad.Color    = Color3.fromRGB(255, 255, 255)
+Quad.Filled   = true
+Quad.Visible  = true
+
+Quad.Gradient.Enabled  = true
+Quad.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 220, 50))
+Quad.Gradient.Rotation = 0
+```
+
+#### 4. Quad with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Quad = Drawing.new("Quad")
+Quad.Position = Center
+Quad.PointA   = Vector2.new(-90, -60)
+Quad.PointB   = Vector2.new(90, -60)
+Quad.PointC   = Vector2.new(90, 60)
+Quad.PointD   = Vector2.new(-90, 60)
+Quad.Color    = Color3.fromRGB(255, 255, 255)
+Quad.Filled   = true
+Quad.Visible  = true
+
+Quad.Outlines.Visible   = true
+Quad.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Quad.Outlines.Thickness = 2
+
+Quad.Gradient.Enabled  = true
+Quad.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 220, 50))
+Quad.Gradient.Rotation = 0
+```
+
+#### 5. Quad with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Quad = Drawing.new("Quad")
+Quad.Position = Center
+Quad.PointA   = Vector2.new(-90, -60)
+Quad.PointB   = Vector2.new(90, -60)
+Quad.PointC   = Vector2.new(90, 60)
+Quad.PointD   = Vector2.new(-90, 60)
+Quad.Color    = Color3.fromRGB(255, 160, 0)
+Quad.Filled   = true
+Quad.Visible  = true
+
+Quad.AutoRotation.Enabled = true
+Quad.AutoRotation.Amount  = 30
+Quad.AutoRotation.Speed   = 1
+```
+
 ---
 
 ### Pentagon
 
-#### Example 1 — Centered pentagon with a gradient and spinning auto-rotation:
+#### 1. Basic Pentagon
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Pentagon = Drawing.new("Pentagon")
-Pentagon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Pentagon.Radius   = 90
-Pentagon.Color    = Color3.fromRGB(180, 100, 255)
+Pentagon.Position = Center
+Pentagon.Radius   = 80
+Pentagon.Color    = Color3.fromRGB(255, 255, 255)
+Pentagon.Filled   = true
+Pentagon.Visible  = true
+```
+
+#### 2. Pentagon with Stroke (Outlines)
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Pentagon = Drawing.new("Pentagon")
+Pentagon.Position = Center
+Pentagon.Radius   = 80
+Pentagon.Color    = Color3.fromRGB(255, 220, 60)
+Pentagon.Filled   = true
+Pentagon.Visible  = true
+
+Pentagon.Outlines.Visible   = true
+Pentagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Pentagon.Outlines.Thickness = 2
+```
+
+#### 3. Pentagon with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Pentagon = Drawing.new("Pentagon")
+Pentagon.Position = Center
+Pentagon.Radius   = 80
+Pentagon.Color    = Color3.fromRGB(255, 255, 255)
 Pentagon.Filled   = true
 Pentagon.Visible  = true
 
 Pentagon.Gradient.Enabled  = true
 Pentagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(180, 60, 255), Color3.fromRGB(255, 80, 160))
 Pentagon.Gradient.Rotation = 45
+```
+
+#### 4. Pentagon with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Pentagon = Drawing.new("Pentagon")
+Pentagon.Position = Center
+Pentagon.Radius   = 80
+Pentagon.Color    = Color3.fromRGB(255, 255, 255)
+Pentagon.Filled   = true
+Pentagon.Visible  = true
+
+Pentagon.Outlines.Visible   = true
+Pentagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Pentagon.Outlines.Thickness = 2
+
+Pentagon.Gradient.Enabled  = true
+Pentagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(180, 60, 255), Color3.fromRGB(255, 80, 160))
+Pentagon.Gradient.Rotation = 45
+```
+
+#### 5. Pentagon with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Pentagon = Drawing.new("Pentagon")
+Pentagon.Position = Center
+Pentagon.Radius   = 80
+Pentagon.Color    = Color3.fromRGB(180, 100, 255)
+Pentagon.Filled   = true
+Pentagon.Visible  = true
 
 Pentagon.AutoRotation.Enabled = true
 Pentagon.AutoRotation.Amount  = 40
 Pentagon.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Pentagon near the right side with visible outlines:
-
-```luau
-local Pentagon = Drawing.new("Pentagon")
-Pentagon.Position = Vector2.new(750, 300)
-Pentagon.Radius   = 70
-Pentagon.Color    = Color3.fromRGB(255, 220, 60)
-Pentagon.Filled   = true
-Pentagon.Visible  = true
-
-Pentagon.Outlines.Visible   = true
-Pentagon.Outlines.Color     = Color3.fromRGB(200, 120, 0)
-Pentagon.Outlines.Thickness = 3
-```
-
 ---
 
 ### Hexagon
 
-#### Example 1 — Centered hexagon with a gradient, stroke on outlines, and auto-rotation:
+#### 1. Basic Hexagon
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Hexagon = Drawing.new("Hexagon")
-Hexagon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Hexagon.Radius   = 90
+Hexagon.Position = Center
+Hexagon.Radius   = 80
+Hexagon.Color    = Color3.fromRGB(255, 255, 255)
+Hexagon.Filled   = true
+Hexagon.Visible  = true
+```
+
+#### 2. Hexagon with Stroke (Outlines)
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Hexagon = Drawing.new("Hexagon")
+Hexagon.Position = Center
+Hexagon.Radius   = 80
 Hexagon.Color    = Color3.fromRGB(0, 200, 180)
+Hexagon.Filled   = true
+Hexagon.Visible  = true
+
+Hexagon.Outlines.Visible   = true
+Hexagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Hexagon.Outlines.Thickness = 2
+```
+
+#### 3. Hexagon with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Hexagon = Drawing.new("Hexagon")
+Hexagon.Position = Center
+Hexagon.Radius   = 80
+Hexagon.Color    = Color3.fromRGB(255, 255, 255)
 Hexagon.Filled   = true
 Hexagon.Visible  = true
 
 Hexagon.Gradient.Enabled  = true
 Hexagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 220, 180), Color3.fromRGB(0, 100, 255))
 Hexagon.Gradient.Rotation = 60
+```
 
-Hexagon.Outlines.Visible            = true
-Hexagon.Outlines.Color              = Color3.fromRGB(255, 255, 255)
-Hexagon.Outlines.Thickness          = 2
-Hexagon.Outlines.Stroke.Enabled     = true
-Hexagon.Outlines.Stroke.Color       = Color3.fromRGB(0, 0, 0)
-Hexagon.Outlines.Stroke.Thickness   = 1
+#### 4. Hexagon with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Hexagon = Drawing.new("Hexagon")
+Hexagon.Position = Center
+Hexagon.Radius   = 80
+Hexagon.Color    = Color3.fromRGB(255, 255, 255)
+Hexagon.Filled   = true
+Hexagon.Visible  = true
+
+Hexagon.Outlines.Visible   = true
+Hexagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Hexagon.Outlines.Thickness = 2
+
+Hexagon.Gradient.Enabled  = true
+Hexagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 220, 180), Color3.fromRGB(0, 100, 255))
+Hexagon.Gradient.Rotation = 60
+```
+
+#### 5. Hexagon with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Hexagon = Drawing.new("Hexagon")
+Hexagon.Position = Center
+Hexagon.Radius   = 80
+Hexagon.Color    = Color3.fromRGB(0, 200, 180)
+Hexagon.Filled   = true
+Hexagon.Visible  = true
 
 Hexagon.AutoRotation.Enabled = true
 Hexagon.AutoRotation.Amount  = 30
 Hexagon.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Small hexagon in the top-center, unfilled with colored outlines:
-
-```luau
-local Hexagon = Drawing.new("Hexagon")
-Hexagon.Position = Vector2.new(500, 100)
-Hexagon.Radius   = 50
-Hexagon.Color    = Color3.fromRGB(0, 200, 180)
-Hexagon.Filled   = false
-Hexagon.Visible  = true
-
-Hexagon.Outlines.Visible   = true
-Hexagon.Outlines.Color     = Color3.fromRGB(0, 200, 180)
-Hexagon.Outlines.Thickness = 3
-```
-
 ---
 
 ### Heptagon
 
-#### Example 1 — Centered heptagon with a gradient and auto-rotation:
+#### 1. Basic Heptagon
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Heptagon = Drawing.new("Heptagon")
-Heptagon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Heptagon.Radius   = 90
-Heptagon.Color    = Color3.fromRGB(255, 80, 160)
+Heptagon.Position = Center
+Heptagon.Radius   = 80
+Heptagon.Color    = Color3.fromRGB(255, 255, 255)
 Heptagon.Filled   = true
 Heptagon.Visible  = true
-
-Heptagon.Gradient.Enabled  = true
-Heptagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 0, 120), Color3.fromRGB(255, 180, 0))
-Heptagon.Gradient.Rotation = 0
-
-Heptagon.AutoRotation.Enabled = true
-Heptagon.AutoRotation.Amount  = 35
-Heptagon.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Heptagon in the bottom-center with a thick outline:
+#### 2. Heptagon with Stroke (Outlines)
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Heptagon = Drawing.new("Heptagon")
-Heptagon.Position = Vector2.new(500, 520)
-Heptagon.Radius   = 65
+Heptagon.Position = Center
+Heptagon.Radius   = 80
 Heptagon.Color    = Color3.fromRGB(255, 100, 180)
 Heptagon.Filled   = true
 Heptagon.Visible  = true
 
 Heptagon.Outlines.Visible   = true
 Heptagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
-Heptagon.Outlines.Thickness = 3
+Heptagon.Outlines.Thickness = 2
+```
+
+#### 3. Heptagon with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Heptagon = Drawing.new("Heptagon")
+Heptagon.Position = Center
+Heptagon.Radius   = 80
+Heptagon.Color    = Color3.fromRGB(255, 255, 255)
+Heptagon.Filled   = true
+Heptagon.Visible  = true
+
+Heptagon.Gradient.Enabled  = true
+Heptagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 0, 120), Color3.fromRGB(255, 180, 0))
+Heptagon.Gradient.Rotation = 0
+```
+
+#### 4. Heptagon with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Heptagon = Drawing.new("Heptagon")
+Heptagon.Position = Center
+Heptagon.Radius   = 80
+Heptagon.Color    = Color3.fromRGB(255, 255, 255)
+Heptagon.Filled   = true
+Heptagon.Visible  = true
+
+Heptagon.Outlines.Visible   = true
+Heptagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Heptagon.Outlines.Thickness = 2
+
+Heptagon.Gradient.Enabled  = true
+Heptagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 0, 120), Color3.fromRGB(255, 180, 0))
+Heptagon.Gradient.Rotation = 0
+```
+
+#### 5. Heptagon with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Heptagon = Drawing.new("Heptagon")
+Heptagon.Position = Center
+Heptagon.Radius   = 80
+Heptagon.Color    = Color3.fromRGB(255, 80, 160)
+Heptagon.Filled   = true
+Heptagon.Visible  = true
+
+Heptagon.AutoRotation.Enabled = true
+Heptagon.AutoRotation.Amount  = 35
+Heptagon.AutoRotation.Speed   = 1
 ```
 
 ---
 
 ### Octagon
 
-#### Example 1 — Centered octagon with a spinning gradient:
+#### 1. Basic Octagon
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Octagon = Drawing.new("Octagon")
-Octagon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Octagon.Radius   = 90
-Octagon.Color    = Color3.fromRGB(80, 160, 255)
+Octagon.Position = Center
+Octagon.Radius   = 80
+Octagon.Color    = Color3.fromRGB(255, 255, 255)
 Octagon.Filled   = true
 Octagon.Visible  = true
-
-Octagon.Gradient.Enabled  = true
-Octagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 120, 255), Color3.fromRGB(80, 255, 200))
-Octagon.Gradient.Rotation = 0
-
-Octagon.Gradient.AutoRotation.Enabled = true
-Octagon.Gradient.AutoRotation.Amount  = 90
-Octagon.Gradient.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Small octagon on the left side with a gradient outline:
+#### 2. Octagon with Stroke (Outlines)
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Octagon = Drawing.new("Octagon")
-Octagon.Position = Vector2.new(120, 300)
-Octagon.Radius   = 55
+Octagon.Position = Center
+Octagon.Radius   = 80
 Octagon.Color    = Color3.fromRGB(60, 140, 255)
 Octagon.Filled   = true
 Octagon.Visible  = true
@@ -820,163 +1222,417 @@ Octagon.Visible  = true
 Octagon.Outlines.Visible   = true
 Octagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
 Octagon.Outlines.Thickness = 2
+```
 
-Octagon.Outlines.Gradient.Enabled = true
-Octagon.Outlines.Gradient.Color   = ColorSequence.new(Color3.fromRGB(0, 200, 255), Color3.fromRGB(0, 80, 200))
+#### 3. Octagon with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Octagon = Drawing.new("Octagon")
+Octagon.Position = Center
+Octagon.Radius   = 80
+Octagon.Color    = Color3.fromRGB(255, 255, 255)
+Octagon.Filled   = true
+Octagon.Visible  = true
+
+Octagon.Gradient.Enabled  = true
+Octagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 120, 255), Color3.fromRGB(80, 255, 200))
+Octagon.Gradient.Rotation = 0
+```
+
+#### 4. Octagon with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Octagon = Drawing.new("Octagon")
+Octagon.Position = Center
+Octagon.Radius   = 80
+Octagon.Color    = Color3.fromRGB(255, 255, 255)
+Octagon.Filled   = true
+Octagon.Visible  = true
+
+Octagon.Outlines.Visible   = true
+Octagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Octagon.Outlines.Thickness = 2
+
+Octagon.Gradient.Enabled  = true
+Octagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 120, 255), Color3.fromRGB(80, 255, 200))
+Octagon.Gradient.Rotation = 0
+```
+
+#### 5. Octagon with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Octagon = Drawing.new("Octagon")
+Octagon.Position = Center
+Octagon.Radius   = 80
+Octagon.Color    = Color3.fromRGB(80, 160, 255)
+Octagon.Filled   = true
+Octagon.Visible  = true
+
+Octagon.AutoRotation.Enabled = true
+Octagon.AutoRotation.Amount  = 25
+Octagon.AutoRotation.Speed   = 1
 ```
 
 ---
 
 ### Nonagon
 
-#### Example 1 — Centered nonagon with a yellow gradient and auto-rotation:
+#### 1. Basic Nonagon
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Nonagon = Drawing.new("Nonagon")
-Nonagon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Nonagon.Radius   = 90
+Nonagon.Position = Center
+Nonagon.Radius   = 80
+Nonagon.Color    = Color3.fromRGB(255, 255, 255)
+Nonagon.Filled   = true
+Nonagon.Visible  = true
+```
+
+#### 2. Nonagon with Stroke (Outlines)
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Nonagon = Drawing.new("Nonagon")
+Nonagon.Position = Center
+Nonagon.Radius   = 80
 Nonagon.Color    = Color3.fromRGB(255, 200, 50)
+Nonagon.Filled   = true
+Nonagon.Visible  = true
+
+Nonagon.Outlines.Visible   = true
+Nonagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Nonagon.Outlines.Thickness = 2
+```
+
+#### 3. Nonagon with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Nonagon = Drawing.new("Nonagon")
+Nonagon.Position = Center
+Nonagon.Radius   = 80
+Nonagon.Color    = Color3.fromRGB(255, 255, 255)
 Nonagon.Filled   = true
 Nonagon.Visible  = true
 
 Nonagon.Gradient.Enabled  = true
 Nonagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 220, 0), Color3.fromRGB(255, 100, 0))
 Nonagon.Gradient.Rotation = 90
+```
+
+#### 4. Nonagon with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Nonagon = Drawing.new("Nonagon")
+Nonagon.Position = Center
+Nonagon.Radius   = 80
+Nonagon.Color    = Color3.fromRGB(255, 255, 255)
+Nonagon.Filled   = true
+Nonagon.Visible  = true
+
+Nonagon.Outlines.Visible   = true
+Nonagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Nonagon.Outlines.Thickness = 2
+
+Nonagon.Gradient.Enabled  = true
+Nonagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 220, 0), Color3.fromRGB(255, 100, 0))
+Nonagon.Gradient.Rotation = 90
+```
+
+#### 5. Nonagon with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Nonagon = Drawing.new("Nonagon")
+Nonagon.Position = Center
+Nonagon.Radius   = 80
+Nonagon.Color    = Color3.fromRGB(255, 200, 50)
+Nonagon.Filled   = true
+Nonagon.Visible  = true
 
 Nonagon.AutoRotation.Enabled = true
 Nonagon.AutoRotation.Amount  = 25
 Nonagon.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Nonagon in the top-right corner with outlines only (unfilled):
-
-```luau
-local Nonagon = Drawing.new("Nonagon")
-Nonagon.Position = Vector2.new(780, 120)
-Nonagon.Radius   = 60
-Nonagon.Color    = Color3.fromRGB(255, 200, 50)
-Nonagon.Filled   = false
-Nonagon.Visible  = true
-
-Nonagon.Outlines.Visible   = true
-Nonagon.Outlines.Color     = Color3.fromRGB(255, 200, 50)
-Nonagon.Outlines.Thickness = 3
-```
-
 ---
 
 ### Decagon
 
-#### Example 1 — Centered decagon with a green gradient and spinning auto-rotation:
+#### 1. Basic Decagon
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Decagon = Drawing.new("Decagon")
-Decagon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Decagon.Radius   = 90
-Decagon.Color    = Color3.fromRGB(50, 255, 120)
+Decagon.Position = Center
+Decagon.Radius   = 80
+Decagon.Color    = Color3.fromRGB(255, 255, 255)
 Decagon.Filled   = true
 Decagon.Visible  = true
-
-Decagon.Gradient.Enabled  = true
-Decagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 255, 100), Color3.fromRGB(0, 180, 80))
-Decagon.Gradient.Rotation = 0
-
-Decagon.AutoRotation.Enabled = true
-Decagon.AutoRotation.Amount  = 20
-Decagon.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Decagon near the center-left with thick white outlines:
+#### 2. Decagon with Stroke (Outlines)
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Decagon = Drawing.new("Decagon")
-Decagon.Position = Vector2.new(250, 300)
-Decagon.Radius   = 70
+Decagon.Position = Center
+Decagon.Radius   = 80
 Decagon.Color    = Color3.fromRGB(30, 200, 90)
 Decagon.Filled   = true
 Decagon.Visible  = true
 
 Decagon.Outlines.Visible   = true
 Decagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
-Decagon.Outlines.Thickness = 3
+Decagon.Outlines.Thickness = 2
+```
+
+#### 3. Decagon with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Decagon = Drawing.new("Decagon")
+Decagon.Position = Center
+Decagon.Radius   = 80
+Decagon.Color    = Color3.fromRGB(255, 255, 255)
+Decagon.Filled   = true
+Decagon.Visible  = true
+
+Decagon.Gradient.Enabled  = true
+Decagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 255, 100), Color3.fromRGB(0, 180, 80))
+Decagon.Gradient.Rotation = 0
+```
+
+#### 4. Decagon with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Decagon = Drawing.new("Decagon")
+Decagon.Position = Center
+Decagon.Radius   = 80
+Decagon.Color    = Color3.fromRGB(255, 255, 255)
+Decagon.Filled   = true
+Decagon.Visible  = true
+
+Decagon.Outlines.Visible   = true
+Decagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Decagon.Outlines.Thickness = 2
+
+Decagon.Gradient.Enabled  = true
+Decagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(0, 255, 100), Color3.fromRGB(0, 180, 80))
+Decagon.Gradient.Rotation = 0
+```
+
+#### 5. Decagon with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Decagon = Drawing.new("Decagon")
+Decagon.Position = Center
+Decagon.Radius   = 80
+Decagon.Color    = Color3.fromRGB(50, 255, 120)
+Decagon.Filled   = true
+Decagon.Visible  = true
+
+Decagon.AutoRotation.Enabled = true
+Decagon.AutoRotation.Amount  = 20
+Decagon.AutoRotation.Speed   = 1
 ```
 
 ---
 
 ### Hendecagon
 
-#### Example 1 — Centered hendecagon with an orange gradient:
+#### 1. Basic Hendecagon
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Hendecagon = Drawing.new("Hendecagon")
-Hendecagon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Hendecagon.Radius   = 90
-Hendecagon.Color    = Color3.fromRGB(255, 100, 50)
+Hendecagon.Position = Center
+Hendecagon.Radius   = 80
+Hendecagon.Color    = Color3.fromRGB(255, 255, 255)
+Hendecagon.Filled   = true
+Hendecagon.Visible  = true
+```
+
+#### 2. Hendecagon with Stroke (Outlines)
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Hendecagon = Drawing.new("Hendecagon")
+Hendecagon.Position = Center
+Hendecagon.Radius   = 80
+Hendecagon.Color    = Color3.fromRGB(220, 80, 30)
+Hendecagon.Filled   = true
+Hendecagon.Visible  = true
+
+Hendecagon.Outlines.Visible   = true
+Hendecagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Hendecagon.Outlines.Thickness = 2
+```
+
+#### 3. Hendecagon with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Hendecagon = Drawing.new("Hendecagon")
+Hendecagon.Position = Center
+Hendecagon.Radius   = 80
+Hendecagon.Color    = Color3.fromRGB(255, 255, 255)
 Hendecagon.Filled   = true
 Hendecagon.Visible  = true
 
 Hendecagon.Gradient.Enabled  = true
 Hendecagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 80, 0), Color3.fromRGB(255, 200, 50))
 Hendecagon.Gradient.Rotation = 45
+```
+
+#### 4. Hendecagon with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Hendecagon = Drawing.new("Hendecagon")
+Hendecagon.Position = Center
+Hendecagon.Radius   = 80
+Hendecagon.Color    = Color3.fromRGB(255, 255, 255)
+Hendecagon.Filled   = true
+Hendecagon.Visible  = true
+
+Hendecagon.Outlines.Visible   = true
+Hendecagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Hendecagon.Outlines.Thickness = 2
+
+Hendecagon.Gradient.Enabled  = true
+Hendecagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(255, 80, 0), Color3.fromRGB(255, 200, 50))
+Hendecagon.Gradient.Rotation = 45
+```
+
+#### 5. Hendecagon with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Hendecagon = Drawing.new("Hendecagon")
+Hendecagon.Position = Center
+Hendecagon.Radius   = 80
+Hendecagon.Color    = Color3.fromRGB(255, 100, 50)
+Hendecagon.Filled   = true
+Hendecagon.Visible  = true
 
 Hendecagon.AutoRotation.Enabled = true
 Hendecagon.AutoRotation.Amount  = 18
 Hendecagon.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Hendecagon in the bottom-left with a gradient outline:
-
-```luau
-local Hendecagon = Drawing.new("Hendecagon")
-Hendecagon.Position = Vector2.new(160, 480)
-Hendecagon.Radius   = 65
-Hendecagon.Color    = Color3.fromRGB(220, 80, 30)
-Hendecagon.Filled   = true
-Hendecagon.Visible  = true
-
-Hendecagon.Outlines.Visible              = true
-Hendecagon.Outlines.Thickness            = 2
-Hendecagon.Outlines.Gradient.Enabled     = true
-Hendecagon.Outlines.Gradient.Color       = ColorSequence.new(Color3.fromRGB(255, 180, 0), Color3.fromRGB(255, 60, 0))
-Hendecagon.Outlines.Gradient.Rotation    = 90
-```
-
 ---
 
 ### Dodecagon
 
-#### Example 1 — Centered dodecagon with a teal gradient and auto-rotation:
+#### 1. Basic Dodecagon
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Dodecagon = Drawing.new("Dodecagon")
-Dodecagon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-Dodecagon.Radius   = 90
-Dodecagon.Color    = Color3.fromRGB(150, 255, 200)
+Dodecagon.Position = Center
+Dodecagon.Radius   = 80
+Dodecagon.Color    = Color3.fromRGB(255, 255, 255)
+Dodecagon.Filled   = true
+Dodecagon.Visible  = true
+```
+
+#### 2. Dodecagon with Stroke (Outlines)
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Dodecagon = Drawing.new("Dodecagon")
+Dodecagon.Position = Center
+Dodecagon.Radius   = 80
+Dodecagon.Color    = Color3.fromRGB(100, 220, 180)
+Dodecagon.Filled   = true
+Dodecagon.Visible  = true
+
+Dodecagon.Outlines.Visible   = true
+Dodecagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Dodecagon.Outlines.Thickness = 2
+```
+
+#### 3. Dodecagon with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Dodecagon = Drawing.new("Dodecagon")
+Dodecagon.Position = Center
+Dodecagon.Radius   = 80
+Dodecagon.Color    = Color3.fromRGB(255, 255, 255)
 Dodecagon.Filled   = true
 Dodecagon.Visible  = true
 
 Dodecagon.Gradient.Enabled  = true
 Dodecagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(100, 255, 200), Color3.fromRGB(0, 180, 140))
 Dodecagon.Gradient.Rotation = 0
-
-Dodecagon.AutoRotation.Enabled = true
-Dodecagon.AutoRotation.Amount  = 15
-Dodecagon.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — Dodecagon near the right side with colored outlines:
+#### 4. Dodecagon with Stroke & Gradient
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local Dodecagon = Drawing.new("Dodecagon")
-Dodecagon.Position = Vector2.new(750, 350)
-Dodecagon.Radius   = 65
-Dodecagon.Color    = Color3.fromRGB(100, 220, 180)
+Dodecagon.Position = Center
+Dodecagon.Radius   = 80
+Dodecagon.Color    = Color3.fromRGB(255, 255, 255)
 Dodecagon.Filled   = true
 Dodecagon.Visible  = true
 
 Dodecagon.Outlines.Visible   = true
-Dodecagon.Outlines.Color     = Color3.fromRGB(0, 255, 180)
-Dodecagon.Outlines.Thickness = 3
+Dodecagon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+Dodecagon.Outlines.Thickness = 2
+
+Dodecagon.Gradient.Enabled  = true
+Dodecagon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(100, 255, 200), Color3.fromRGB(0, 180, 140))
+Dodecagon.Gradient.Rotation = 0
+```
+
+#### 5. Dodecagon with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local Dodecagon = Drawing.new("Dodecagon")
+Dodecagon.Position = Center
+Dodecagon.Radius   = 80
+Dodecagon.Color    = Color3.fromRGB(150, 255, 200)
+Dodecagon.Filled   = true
+Dodecagon.Visible  = true
+
+Dodecagon.AutoRotation.Enabled = true
+Dodecagon.AutoRotation.Amount  = 15
+Dodecagon.AutoRotation.Speed   = 1
 ```
 
 ---
@@ -994,35 +1650,109 @@ All shared polygon properties and sub-objects apply.
 
 > **Note:** Increasing `Points` automatically creates the new `PointN` entries initialized to `Vector2.zero`. Decreasing `Points` does not remove old entries — they are simply ignored during rendering.
 
-#### Example 1 — Centered 6-sided NGon with Radius, gradient, and auto-rotation:
+---
+
+#### 1. Basic NGon
 
 ```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local NGon = Drawing.new("NGon")
 NGon.Points   = 6
-NGon.Position = UDim2.new(0.5, 0, 0.5, 0) -- center of screen
-NGon.Radius   = 90
+NGon.Position = Center
+NGon.Radius   = 80
+NGon.Color    = Color3.fromRGB(255, 255, 255)
+NGon.Filled   = true
+NGon.Visible  = true
+```
+
+#### 2. NGon with Stroke (Outlines)
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local NGon = Drawing.new("NGon")
+NGon.Points   = 6
+NGon.Position = Center
+NGon.Radius   = 80
 NGon.Color    = Color3.fromRGB(200, 150, 255)
+NGon.Filled   = true
+NGon.Visible  = true
+
+NGon.Outlines.Visible   = true
+NGon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+NGon.Outlines.Thickness = 2
+```
+
+#### 3. NGon with Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local NGon = Drawing.new("NGon")
+NGon.Points   = 6
+NGon.Position = Center
+NGon.Radius   = 80
+NGon.Color    = Color3.fromRGB(255, 255, 255)
 NGon.Filled   = true
 NGon.Visible  = true
 
 NGon.Gradient.Enabled  = true
 NGon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(180, 80, 255), Color3.fromRGB(80, 180, 255))
 NGon.Gradient.Rotation = 45
+```
+
+#### 4. NGon with Stroke & Gradient
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local NGon = Drawing.new("NGon")
+NGon.Points   = 6
+NGon.Position = Center
+NGon.Radius   = 80
+NGon.Color    = Color3.fromRGB(255, 255, 255)
+NGon.Filled   = true
+NGon.Visible  = true
+
+NGon.Outlines.Visible   = true
+NGon.Outlines.Color     = Color3.fromRGB(255, 255, 255)
+NGon.Outlines.Thickness = 2
+
+NGon.Gradient.Enabled  = true
+NGon.Gradient.Color    = ColorSequence.new(Color3.fromRGB(180, 80, 255), Color3.fromRGB(80, 180, 255))
+NGon.Gradient.Rotation = 45
+```
+
+#### 5. NGon with AutoRotation
+
+```luau
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
+local NGon = Drawing.new("NGon")
+NGon.Points   = 6
+NGon.Position = Center
+NGon.Radius   = 80
+NGon.Color    = Color3.fromRGB(200, 150, 255)
+NGon.Filled   = true
+NGon.Visible  = true
 
 NGon.AutoRotation.Enabled = true
 NGon.AutoRotation.Amount  = 50
 NGon.AutoRotation.Speed   = 1
 ```
 
-#### Example 2 — 8-sided NGon with fully custom manual points near the bottom-right:
+#### Custom Manual Points Example
+
+You can skip `Radius` and place each vertex manually using `PointN` properties. This example creates an arrow shape with 8 points:
 
 ```luau
--- Arrow-like custom shape with 8 manual points
+local Center = workspace.CurrentCamera.ViewportSize / 2
+
 local NGon = Drawing.new("NGon")
 NGon.Points   = 8
-NGon.Position = Vector2.new(700, 450)
+NGon.Position = Center
 
--- Arrow pointing right, built from 8 vertices
 NGon.Point1 = Vector2.new(-80,  -20)
 NGon.Point2 = Vector2.new(  0,  -20)
 NGon.Point3 = Vector2.new(  0,  -50)
@@ -1039,20 +1769,6 @@ NGon.Visible = true
 NGon.Outlines.Visible   = true
 NGon.Outlines.Color     = Color3.fromRGB(200, 150, 0)
 NGon.Outlines.Thickness = 2
-```
-
-#### Example 3 — 3-sided NGon (triangle) with manual star-like spike points:
-
-```luau
-local NGon = Drawing.new("NGon")
-NGon.Points   = 3
-NGon.Position = Vector2.new(300, 200)
-NGon.Point1   = Vector2.new(0, -100)
-NGon.Point2   = Vector2.new(86, 50)
-NGon.Point3   = Vector2.new(-86, 50)
-NGon.Color    = Color3.fromRGB(255, 80, 80)
-NGon.Filled   = true
-NGon.Visible  = true
 ```
 
 ---
