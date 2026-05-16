@@ -38,8 +38,8 @@ local Letters = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L" }
 local SideCounts = { Triangle = 3, Quad = 4, Pentagon = 5,Hexagon = 6, Heptagon = 7, Octagon = 8, Nonagon = 9, Decagon = 10, Hendecagon = 11, Dodecagon = 12 }
 
 
---// HELPER FUNCTIONS
 
+--// HELPER FUNCTIONS
 
 
 
@@ -212,8 +212,9 @@ local function ApplyAutoRotation(Parent, OnTick)
             if Key ~= "Enabled" then return end
             
             if Value then
-                table.insert(ActiveAutoRotations, Tick)
-                -- Fix: renamed SharedHeartbeat to HeartbeatConnection
+                if not table.find(ActiveAutoRotations, Tick) then
+                    table.insert(ActiveAutoRotations, Tick)
+                end
                 if HeartbeatConnection then return end
                 HeartbeatConnection = RunService.Heartbeat:Connect(function(DeltaTime)
                     for _, Tick in ActiveAutoRotations do
