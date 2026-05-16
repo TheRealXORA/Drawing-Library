@@ -276,6 +276,7 @@ local function ApplyStroke(Parent)
     local Stroke = {
         Enabled = true,
         Color = Color3.new(1, 1, 1),
+        Transparency = 1,
         Thickness = 1,
         LineJoinMode = Enum.LineJoinMode.Miter,
         Gradient = ApplyGradient(UIStroke),
@@ -283,7 +284,7 @@ local function ApplyStroke(Parent)
     
     for Property, Value in Stroke do
         if Property == "Gradient" or UIStroke[Property] == nil then continue end
-        UIStroke[Property] = Value
+        UIStroke[Property] = Property == "Transparency" and ConvertTransparency(Value) or Value
     end
     
     return setmetatable({}, {
@@ -296,7 +297,7 @@ local function ApplyStroke(Parent)
             assert(UIStroke[Key] ~= nil, "Invalid Property '" .. Key .. "' For Stroke Object")
             AssertType(Value, typeof(Stroke[Key]), Key)
             
-            Stroke[Key] = Value
+            Stroke[Key] = Key == "Transparency" and ConvertTransparency(Value) or Value
             UIStroke[Key] = Value
         end
     })
