@@ -297,7 +297,8 @@ local function ApplyStroke(Parent)
             assert(UIStroke[Key] ~= nil, "Invalid Property '" .. Key .. "' For Stroke Object")
             AssertType(Value, typeof(Stroke[Key]), Key)
             
-            Stroke[Key] = Key == "Transparency" and ConvertTransparency(Value) or Value
+            Value = Key == "Transparency" and ConvertTransparency(Value) or Value
+            Stroke[Key] = Value
             UIStroke[Key] = Value
         end
     })
