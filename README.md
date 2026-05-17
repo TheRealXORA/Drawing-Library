@@ -101,7 +101,7 @@ local NGon   = Drawing.new("NGon")
 ## Drawing.IsInShape
 
 ```luau
-Drawing.IsInShape(Shape: DrawingObject, Target: Vector2 | UDim2 | Vector3 | BasePart | Model, OnScreenCheck: boolean?) -> boolean
+Drawing.IsInShape(Shape: DrawingObject, Target: Vector2 | UDim2 | Vector3 | BasePart | Model, OnScreenCheck: boolean?) -> boolean (InShape), number (Distance)
 ```
 
 Returns `true` if the given `Target` position lies within the bounds of `Shape`. Works for all shape types including polygons.
