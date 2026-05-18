@@ -633,7 +633,7 @@ local function DrawPolygon(ShapeName, DefaultPoints)
             
             Line.From = Edge[1] - Extend
             Line.To = Edge[2] + Extend
-            Line.Visible = Outlines.Visible
+            Line.Visible = Polygon.Visible and Outlines.Visible
             Line.Transparency = Outlines.Transparency
             Line.Color = Outlines.Color
             Line.Thickness = Outlines.Thickness
