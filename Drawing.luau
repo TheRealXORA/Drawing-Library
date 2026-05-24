@@ -105,15 +105,14 @@ local function ConvertTargetToScreenPosition(Target, PropertyName, OnScreenCheck
                 if Distance >= BestDistance then continue end
                 
                 BestDistance = Distance
-                TargetPart = Descendant
+                --TargetPart = Descendant
             end
-            
-            if not TargetPart then return end
             TargetPart = Target:FindFirstChild("UpperTorso") or Target:FindFirstChild("Torso")
         else
             TargetPart = Target
         end
         
+        if not TargetPart then return end
         local ClosestPoint = GetClosestPoint(TargetPart, Camera, HalfResolution)
         if not ClosestPoint or not select(2, Camera:WorldToViewportPoint(ClosestPoint)) then return end
         
