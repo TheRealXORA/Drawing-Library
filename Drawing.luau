@@ -109,6 +109,7 @@ local function ConvertTargetToScreenPosition(Target, PropertyName, OnScreenCheck
             end
             
             if not TargetPart then return end
+            TargetPart = Target:FindFirstChild("UpperTorso") or Target:FindFirstChild("Torso")
         else
             TargetPart = Target
         end
