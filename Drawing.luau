@@ -117,7 +117,7 @@ local function ConvertTargetToScreenPosition(Target, PropertyName, OnScreenCheck
         local ClosestPoint = GetClosestPoint(TargetPart, Camera, HalfResolution)
         if not ClosestPoint or not select(2, Camera:WorldToViewportPoint(ClosestPoint)) then return end
         
-        local FinalPosition = IsModel and Camera:WorldToViewportPoint(Target:GetPivot().p) or Camera:WorldToViewportPoint(TargetPart.Position)
+        local FinalPosition = IsModel and Camera:WorldToViewportPoint(TargetPart.Name:find("Torso") and TargetPart.Position or Target:GetPivot().p) or Camera:WorldToViewportPoint(TargetPart.Position)
         return Vector2.new(FinalPosition.X, FinalPosition.Y)
     elseif Type == "Vector3" then
         local Camera = GetCamera()
