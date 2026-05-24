@@ -171,7 +171,7 @@ local function CreateDrawingObject(ObjectType, UpdateFunction)
             
             assert(ObjectType[Key] ~= nil, "Invalid Property '" .. Key .. "' For " .. ObjectType.__SHAPE)
             
-            if table.find({"Position", "From", "To", "Size"}, Key) then
+            if table.find(ObjectType.__SHAPE == "Text" and {"Position", "From", "To"} or {"Position", "From", "To", "Size"}, Key) then
                 assert(typeof(Value) == "Vector2" or typeof(Value) == "UDim2", "Property '" .. Key .. "' Expects Vector2 Or UDim2 But Got " .. typeof(Value))
                 Value = typeof(Value) == "UDim2" and ConvertUDim2ToVector2(Value) or Value
             else
@@ -310,6 +310,50 @@ end
 --// DRAWING FUNCTIONS
 
 
+local function DrawText()
+    local Text = BaseObject + {
+        __SHAPE = "Text",
+        __INSTANCE = Instance.new("TextLabel", DrawingDirectory),
+        Position = Vector2.zero,
+        Text = "",
+        Font = Enum.Font.Roboto,
+        Size = 14,
+        Center = false,
+    }
+    
+    local TextLabel = Text.__INSTANCE
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.BorderSizePixel = 0
+    Text.Stroke = ApplyStroke(TextLabel)
+    
+    local function ApplyPosition()
+        local Bounds = TextLabel.TextBounds
+        TextLabel.Size = UDim2.fromOffset(Bounds.X, Bounds.Y)
+        
+        if Text.Center then
+            TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+        else
+            TextLabel.AnchorPoint = Vector2.new(0, 0.5)
+        end
+        
+        TextLabel.Position = UDim2.fromOffset(Text.Position.X, Text.Position.Y)
+    end
+    
+    TextLabel:GetPropertyChangedSignal("TextBounds"):Connect(ApplyPosition)
+    
+    local function UpdateText()
+        TextLabel.Visible = Text.Visible
+        TextLabel.TextTransparency = ConvertTransparency(Text.Transparency)
+        TextLabel.TextColor3 = Text.Color
+        TextLabel.ZIndex = Text.ZIndex
+        TextLabel.TextSize = Text.Size
+        TextLabel.Text = Text.Text
+        TextLabel.Font = Text.Font
+        ApplyPosition()
+    end; UpdateText()
+    
+    return CreateDrawingObject(Text, UpdateText)
+end
 
 local function DrawLine(Parent)
     local Line = BaseObject + {
@@ -784,6 +828,7 @@ local function DrawNGon()
 end
 
 local DrawingFunctions = {
+    ["text"] = DrawText,
     ["line"] = DrawLine,
     ["square"] = DrawSquare,
     ["circle"] = DrawCircle,
